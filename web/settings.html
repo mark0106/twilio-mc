@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Settings · SMS Campaigns</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>SMS Campaigns</h1>
+      <div class="user">
+        <span id="user-email">…</span>
+        <button id="logout">Log out</button>
+      </div>
+    </header>
+    <main>
+      <h2>Twilio connection</h2>
+      <p class="muted">Paste your Twilio Account SID and Auth Token. The token is encrypted with AES-256-GCM before being stored.</p>
+
+      <div id="loading" class="muted">Loading…</div>
+
+      <div id="connected" class="hidden">
+        <div class="row">
+          <div>
+            <div class="muted">Status</div>
+            <span class="status-badge connected">Connected</span>
+          </div>
+          <div>
+            <div class="muted">Account SID</div>
+            <div class="kv" id="connected-sid"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <div class="muted">Connected at</div>
+            <div class="kv" id="connected-at"></div>
+          </div>
+        </div>
+        <button class="danger" id="disconnect">Disconnect</button>
+      </div>
+
+      <form id="connect-form" class="hidden">
+        <label for="accountSid">Account SID</label>
+        <input id="accountSid" type="text" required pattern="AC[a-fA-F0-9]{32}" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+        <label for="authToken">Auth Token</label>
+        <input id="authToken" type="password" required autocomplete="off" />
+        <button class="primary" type="submit" id="connect-submit">Connect</button>
+      </form>
+
+      <div id="error" class="error hidden"></div>
+      <div id="success" class="success hidden"></div>
+    </main>
+    <script type="module" src="/js/pages/settings.js"></script>
+  </body>
+</html>

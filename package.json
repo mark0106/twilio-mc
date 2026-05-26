@@ -1,0 +1,20 @@
+{
+  "name": "sms-campaigns",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "npm --prefix functions start",
+    "dev": "npm --prefix functions run dev",
+    "test": "npm --prefix functions test",
+    "install:all": "npm install && npm --prefix functions install",
+    "deploy": "firebase deploy",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:rules": "firebase deploy --only firestore:rules",
+    "emulate": "firebase emulators:start"
+  }
+}

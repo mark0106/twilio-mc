@@ -1,0 +1,35 @@
+{
+  "name": "sms-campaigns-functions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "dev": "node --watch server-local.js",
+    "start": "node server-local.js",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "emulate": "firebase emulators:start --only functions,hosting"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "firebase-admin": "^13.0.1",
+    "firebase-functions": "^6.1.0",
+    "pino": "^9.5.0",
+    "pino-http": "^10.3.0",
+    "twilio": "^5.3.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "testPathIgnorePatterns": ["/node_modules/"]
+  }
+}
