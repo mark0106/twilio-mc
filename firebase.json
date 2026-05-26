@@ -42,6 +42,22 @@
       {
         "source": "/contact-lists",
         "function": { "functionId": "api", "region": "us-central1" }
+      },
+      {
+        "source": "/messaging-services",
+        "function": { "functionId": "api", "region": "us-central1" }
+      },
+      {
+        "source": "/messaging-services/**",
+        "function": { "functionId": "api", "region": "us-central1" }
+      },
+      {
+        "source": "/sends",
+        "function": { "functionId": "api", "region": "us-central1" }
+      },
+      {
+        "source": "/sends/**",
+        "function": { "functionId": "api", "region": "us-central1" }
       }
     ]
   },

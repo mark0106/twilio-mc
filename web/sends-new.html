@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>New Single Send · SMS Campaigns</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header></header>
+    <main class="composer wide">
+      <section class="composer-form">
+        <div class="toolbar">
+          <h2>New Single Send</h2>
+          <a class="button secondary" href="/contacts.html">Cancel</a>
+        </div>
+
+        <div id="not-connected" class="error hidden">
+          You haven't connected Twilio yet. <a class="link" href="/settings.html">Go to Settings</a>.
+        </div>
+
+        <label for="name">Single Send name</label>
+        <input id="name" type="text" required maxlength="200" placeholder="Spring promo blast" />
+
+        <label for="senderName">Sender name (shown in preview)</label>
+        <input id="senderName" type="text" maxlength="120" placeholder="Your Brand" />
+
+        <label for="messagingService">Messaging Service</label>
+        <select id="messagingService" required>
+          <option value="">Loading…</option>
+        </select>
+
+        <label for="contactList">Contact list</label>
+        <select id="contactList" required>
+          <option value="">Loading…</option>
+        </select>
+        <p class="muted" style="margin:6px 0 0" id="list-meta"></p>
+
+        <div class="composer-section">
+          <h3>Message body</h3>
+          <textarea id="body" maxlength="1600" placeholder="Hi {name}, ..."></textarea>
+          <div class="counter-row">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <button type="button" class="emoji-btn" id="emoji-btn" aria-label="Insert emoji">🙂</button>
+              <span id="char-count"></span>
+            </div>
+            <span class="encoding-badge" id="encoding-badge">GSM-7</span>
+          </div>
+        </div>
+
+        <div class="composer-section">
+          <h3>Schedule</h3>
+          <div class="radio-row">
+            <label><input type="radio" name="schedule" value="now" checked /> Send immediately</label>
+            <label><input type="radio" name="schedule" value="later" /> Schedule for later</label>
+            <input id="scheduledAt" type="datetime-local" disabled />
+          </div>
+          <p class="muted" style="margin:6px 0 0">Scheduled time must be at least 15 minutes from now and no more than 7 days out.</p>
+        </div>
+
+        <div class="composer-section">
+          <h3>Send a test</h3>
+          <div class="test-row">
+            <input id="testTo" type="tel" placeholder="+14155552671 (E.164)" />
+            <button type="button" class="button secondary" id="test-btn">Send test</button>
+          </div>
+          <div id="test-status" class="muted" style="margin-top:8px"></div>
+        </div>
+
+        <div class="composer-section" style="border:none">
+          <button type="button" class="button" id="review-btn">Review &amp; Send</button>
+        </div>
+
+        <div id="error" class="error hidden"></div>
+      </section>
+
+      <aside class="preview-col">
+        <div id="phone-preview"></div>
+      </aside>
+    </main>
+
+    <div id="review-modal" class="modal-backdrop hidden">
+      <div class="modal">
+        <h2>Review your Single Send</h2>
+        <dl>
+          <div><dt>Name</dt><dd id="rv-name"></dd></div>
+          <div><dt>Sender name</dt><dd id="rv-sender"></dd></div>
+          <div><dt>Messaging Service</dt><dd id="rv-ms"></dd></div>
+          <div><dt>Contact list</dt><dd id="rv-list"></dd></div>
+          <div><dt>Recipients</dt><dd id="rv-recipients"></dd></div>
+          <div><dt>Encoding</dt><dd id="rv-encoding"></dd></div>
+          <div><dt>Segments per recipient</dt><dd id="rv-segments"></dd></div>
+          <div><dt>Schedule</dt><dd id="rv-schedule"></dd></div>
+        </dl>
+        <p class="muted" style="margin-top: 14px"><strong>Body preview:</strong></p>
+        <p id="rv-body" style="white-space: pre-wrap; background: #f9fafb; padding: 12px; border-radius: 8px; font-size: 13px;"></p>
+
+        <p id="rv-cost" class="muted" style="font-size: 13px; margin-top: 12px;"></p>
+
+        <div id="modal-error" class="error hidden"></div>
+
+        <div class="modal-actions">
+          <button class="button secondary" id="modal-cancel">Cancel</button>
+          <button class="button" id="modal-confirm">Confirm Send</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/js/pages/sends-new.js"></script>
+  </body>
+</html>

@@ -2,6 +2,7 @@ import { logout } from './auth.js';
 
 const LINKS = [
   { href: '/contacts.html', label: 'Contact Lists' },
+  { href: '/sends-new.html', label: 'Single Sends' },
   { href: '/settings.html', label: 'Settings' },
 ];
 

@@ -6,6 +6,8 @@ import pinoHttp from 'pino-http';
 import { verifyFirebaseToken } from './auth.js';
 import tenantRouter from './routes/tenant.js';
 import contactListsRouter from './routes/contactLists.js';
+import messagingServicesRouter from './routes/messagingServices.js';
+import sendsRouter from './routes/sends.js';
 
 export function buildApp({ serveStatic = false, webDir = null } = {}) {
   const logger = pino({
@@ -39,6 +41,8 @@ export function buildApp({ serveStatic = false, webDir = null } = {}) {
 
   app.use('/tenant', verifyFirebaseToken, tenantRouter);
   app.use('/contact-lists', verifyFirebaseToken, contactListsRouter);
+  app.use('/messaging-services', verifyFirebaseToken, messagingServicesRouter);
+  app.use('/sends', verifyFirebaseToken, sendsRouter);
 
   if (serveStatic && webDir) {
     app.use(express.static(webDir, { extensions: ['html'] }));
