@@ -5,6 +5,7 @@ import pinoHttp from 'pino-http';
 
 import { verifyFirebaseToken } from './auth.js';
 import tenantRouter from './routes/tenant.js';
+import contactListsRouter from './routes/contactLists.js';
 
 export function buildApp({ serveStatic = false, webDir = null } = {}) {
   const logger = pino({
@@ -27,11 +28,17 @@ export function buildApp({ serveStatic = false, webDir = null } = {}) {
 
   app.use(pinoHttp({ logger }));
   app.use(cors());
-  app.use(express.json({ limit: '1mb' }));
+  // JSON parser scoped to non-multipart routes so the CSV upload endpoint can stream.
+  app.use((req, res, next) => {
+    const ct = req.headers['content-type'] || '';
+    if (ct.startsWith('multipart/form-data')) return next();
+    return express.json({ limit: '1mb' })(req, res, next);
+  });
 
   app.get('/health', (_req, res) => res.json({ ok: true }));
 
   app.use('/tenant', verifyFirebaseToken, tenantRouter);
+  app.use('/contact-lists', verifyFirebaseToken, contactListsRouter);
 
   if (serveStatic && webDir) {
     app.use(express.static(webDir, { extensions: ['html'] }));

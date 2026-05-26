@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>New Contact List · SMS Campaigns</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header></header>
+    <main class="wide">
+      <div class="toolbar">
+        <h2>New Contact List</h2>
+        <a class="button secondary" href="/contacts.html">Back</a>
+      </div>
+
+      <form id="upload-form">
+        <label for="name">List name</label>
+        <input id="name" type="text" required maxlength="200" placeholder="Spring promo" />
+
+        <label for="region">Default region for phone normalization</label>
+        <select id="region">
+          <option value="US" selected>United States (US)</option>
+          <option value="CA">Canada (CA)</option>
+          <option value="GB">United Kingdom (GB)</option>
+          <option value="AU">Australia (AU)</option>
+          <option value="DE">Germany (DE)</option>
+          <option value="FR">France (FR)</option>
+          <option value="MX">Mexico (MX)</option>
+          <option value="BR">Brazil (BR)</option>
+          <option value="IN">India (IN)</option>
+        </select>
+        <p class="muted" style="margin:6px 0 0">Used when a row's phone isn't already in E.164 (+1…) format. Numbers in other formats are still accepted if they include a country code.</p>
+
+        <label>CSV file</label>
+        <label class="dropzone" id="dropzone">
+          <strong>Click to choose a CSV file</strong>
+          <span>or drag and drop here</span>
+          <div class="filename" id="filename" style="margin-top:10px"></div>
+          <input id="file" type="file" accept=".csv,text/csv" required />
+        </label>
+        <p class="muted" style="margin:6px 0 0">
+          We look for a <code>phone</code>, <code>mobile</code>, <code>cellphone</code>, or
+          <code>number</code> column. Rows without a normalizable phone are skipped and reported.
+          Max file size 32&nbsp;MB.
+        </p>
+
+        <div id="preview-block" class="hidden" style="margin-top:24px">
+          <strong>Preview (first 5 rows)</strong>
+          <div id="preview"></div>
+        </div>
+
+        <button class="primary" type="submit" id="submit" disabled>Upload</button>
+      </form>
+
+      <div id="error" class="error hidden"></div>
+      <div id="status" class="muted hidden" style="margin-top:12px"></div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script type="module" src="/js/pages/contacts-new.js"></script>
+  </body>
+</html>

@@ -1,15 +1,10 @@
 import { auth } from '../firebase-init.js';
-import { requireUser, logout } from '../auth.js';
+import { requireUser } from '../auth.js';
 import { apiFetch } from '../api.js';
+import { renderNav } from '../nav.js';
 
 const user = await requireUser();
-if (!user) {
-  // requireUser already redirected
-} else {
-  document.getElementById('user-email').textContent = user.email || '';
-}
-
-document.getElementById('logout').addEventListener('click', () => logout());
+renderNav(user);
 
 const loadingEl = document.getElementById('loading');
 const connectedEl = document.getElementById('connected');

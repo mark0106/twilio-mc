@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Contact List · SMS Campaigns</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header></header>
+    <main class="wide">
+      <div class="toolbar">
+        <h2 id="list-name">Contact List</h2>
+        <div>
+          <a class="button secondary" href="/contacts.html">Back</a>
+          <button class="button danger" id="delete">Delete</button>
+        </div>
+      </div>
+
+      <div id="loading" class="muted">Loading…</div>
+
+      <div id="meta" class="hidden">
+        <div class="row">
+          <div>
+            <div class="muted">Status</div>
+            <span id="meta-status"></span>
+          </div>
+          <div>
+            <div class="muted">Total contacts</div>
+            <div class="kv" id="meta-count"></div>
+          </div>
+          <div>
+            <div class="muted">Errors</div>
+            <div class="kv" id="meta-errors"></div>
+          </div>
+        </div>
+        <div id="progress-row" class="hidden" style="margin: 10px 0 18px 0">
+          <div class="progress"><span id="progress-bar" style="width:0%"></span></div>
+          <span class="muted" id="progress-text" style="margin-left:8px"></span>
+        </div>
+
+        <h3 style="margin-top:24px">Preview (first 20)</h3>
+        <div id="contacts-preview"></div>
+
+        <div id="error-sample-block" class="hidden" style="margin-top:24px">
+          <h3>Sample errors (first 100)</h3>
+          <div id="error-sample"></div>
+        </div>
+      </div>
+    </main>
+    <script type="module" src="/js/pages/contacts-detail.js"></script>
+  </body>
+</html>

@@ -34,6 +34,14 @@
       {
         "source": "/tenant/**",
         "function": { "functionId": "api", "region": "us-central1" }
+      },
+      {
+        "source": "/contact-lists/**",
+        "function": { "functionId": "api", "region": "us-central1" }
+      },
+      {
+        "source": "/contact-lists",
+        "function": { "functionId": "api", "region": "us-central1" }
       }
     ]
   },

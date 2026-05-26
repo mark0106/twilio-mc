@@ -22,7 +22,7 @@ export async function requireUser(redirectTo = '/login.html') {
   return user;
 }
 
-export async function requireSignedOut(redirectTo = '/settings.html') {
+export async function requireSignedOut(redirectTo = '/contacts.html') {
   const user = await onAuthReady();
   if (user) {
     window.location.href = redirectTo;

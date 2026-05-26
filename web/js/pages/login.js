@@ -22,7 +22,7 @@ form.addEventListener('submit', async (e) => {
   const password = document.getElementById('password').value;
   try {
     await signInWithEmailAndPassword(auth, email, password);
-    window.location.href = '/settings.html';
+    window.location.href = '/contacts.html';
   } catch (err) {
     showError(err.message || 'Login failed');
     submitBtn.disabled = false;

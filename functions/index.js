@@ -16,8 +16,11 @@ const app = buildApp();
 
 export const api = onRequest(
   {
-    memory: '512MiB',
-    timeoutSeconds: 60,
+    // CSV uploads (up to ~30 MB / 300K rows) buffer in memory while papaparse
+    // streams and BulkWriter fans out to Firestore. 1 GiB gives comfortable
+    // headroom for the buffer + parsed objects + SDK overhead.
+    memory: '1GiB',
+    timeoutSeconds: 600,
     secrets: [MASTER_ENCRYPTION_KEY],
     concurrency: 80,
     cors: false, // Hosting rewrites mean same-origin; no CORS preflight needed.

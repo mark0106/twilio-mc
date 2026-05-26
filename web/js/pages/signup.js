@@ -25,7 +25,7 @@ form.addEventListener('submit', async (e) => {
     await createUserWithEmailAndPassword(auth, email, password);
     // Initialize the tenant document on the backend.
     await apiFetch('/tenant/init', { method: 'POST' });
-    window.location.href = '/settings.html';
+    window.location.href = '/contacts.html';
   } catch (err) {
     showError(err.message || 'Sign-up failed');
     submitBtn.disabled = false;
