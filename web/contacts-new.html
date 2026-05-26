@@ -40,9 +40,10 @@
           <input id="file" type="file" accept=".csv,text/csv" required />
         </label>
         <p class="muted" style="margin:6px 0 0">
-          We look for a <code>phone</code>, <code>mobile</code>, <code>cellphone</code>, or
-          <code>number</code> column. Rows without a normalizable phone are skipped and reported.
-          Max file size 32&nbsp;MB.
+          We look for a <code>phone</code>, <code>phonenumber</code>, <code>mobile</code>, or
+          <code>number</code> column, plus an optional <code>name</code> column. Rows without a
+          normalizable phone are skipped and reported. Max file size 32&nbsp;MB.
+          <a class="link" href="/contacts-template.csv" download>Download CSV template</a>
         </p>
 
         <div id="preview-block" class="hidden" style="margin-top:24px">

@@ -54,6 +54,10 @@ describe('row field picking', () => {
     expect(pickFirstName({ noname: 'x' })).toBeNull();
   });
 
+  test('"name" column maps to firstName', () => {
+    expect(pickFirstName({ name: 'Alice' })).toBe('Alice');
+  });
+
   test('pickCustomFields excludes the reserved columns', () => {
     const row = {
       phone: '+14155552671',

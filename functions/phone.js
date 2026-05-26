@@ -14,7 +14,7 @@ export const PHONE_HEADERS = [
   'telephone',
 ];
 
-export const FIRST_NAME_HEADERS = ['firstname', 'first_name', 'first', 'given_name', 'givenname'];
+export const FIRST_NAME_HEADERS = ['firstname', 'first_name', 'first', 'given_name', 'givenname', 'name'];
 export const LAST_NAME_HEADERS = ['lastname', 'last_name', 'last', 'family_name', 'familyname', 'surname'];
 
 export function normalizePhone(raw, defaultRegion = 'US') {
