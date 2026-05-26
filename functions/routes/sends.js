@@ -8,6 +8,7 @@ import {
 } from '../twilioClient.js';
 import { computeSegments } from '../segments.js';
 import { normalizePhone } from '../phone.js';
+import { prepareSendForLaunch } from '../jobs/sendCampaign.js';
 
 const router = Router();
 
@@ -143,8 +144,15 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-// POST /sends/:id/confirm  — Phase 3: just transitions draft → sending or
-// → scheduled. Phase 4 will wire the actual Twilio fan-out + status callbacks.
+// POST /sends/:id/confirm  —
+// 1. Verifies status === 'draft'
+// 2. Re-validates schedule window if scheduledAt is set
+// 3. Refreshes recipientCount from the contact list (may have changed since draft)
+// 4. Initializes 50 zeroed counter shards
+// 5. Flips status to 'sending' atomically — the Firestore trigger function
+//    (processSend) picks up the change and runs the fan-out worker
+//
+// Returns 200 immediately. The actual send happens asynchronously.
 router.post('/:id/confirm', async (req, res, next) => {
   try {
     const sendRef = tenantRef(req.user.uid)
@@ -154,16 +162,49 @@ router.post('/:id/confirm', async (req, res, next) => {
     if (!snap.exists) return res.status(404).json({ error: 'not_found' });
     const data = snap.data();
     if (data.status !== 'draft') {
-      return res.status(400).json({ error: 'not_draft', currentStatus: data.status });
+      return res
+        .status(400)
+        .json({ error: 'not_draft', currentStatus: data.status });
     }
 
-    const isScheduled =
-      data.scheduledAt && data.scheduledAt.toDate() > new Date();
-    const nextStatus = isScheduled ? 'scheduled' : 'sending';
+    // Re-validate schedule window at confirm time (the draft could have been
+    // sitting around long enough that the originally-acceptable time is now
+    // either past or beyond the 7-day window).
+    if (data.scheduledAt) {
+      const ts = data.scheduledAt.toDate().getTime();
+      const now = Date.now();
+      if (ts - now < 15 * 60 * 1000) {
+        return res.status(400).json({ error: 'schedule_too_soon' });
+      }
+      if (ts - now > 7 * 24 * 60 * 60 * 1000) {
+        return res.status(400).json({ error: 'schedule_too_far' });
+      }
+    }
 
-    await sendRef.update({ status: nextStatus });
-    res.json({ status: nextStatus, sendId: sendRef.id });
+    const { recipientCount, shardCount } = await prepareSendForLaunch({
+      tenantId: req.user.uid,
+      sendId: req.params.id,
+    });
+
+    // Atomically flip status to 'sending'. The Eventarc trigger picks this up.
+    // We also write recipientCount so the UI shows the current count even if
+    // contacts were added or removed since the draft was created.
+    await sendRef.update({
+      status: 'sending',
+      recipientCount,
+      shardCount,
+      confirmedAt: FieldValue.serverTimestamp(),
+      // Clear any stale cursor from a previous (failed) run.
+      processedCursor: null,
+      processedQueued: 0,
+      processedFailed: 0,
+    });
+
+    res.json({ status: 'sending', sendId: sendRef.id, recipientCount });
   } catch (err) {
+    if (err.message === 'contact_list_not_found') {
+      return res.status(400).json({ error: 'contact_list_not_found' });
+    }
     next(err);
   }
 });

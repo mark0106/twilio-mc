@@ -8,6 +8,7 @@ import tenantRouter from './routes/tenant.js';
 import contactListsRouter from './routes/contactLists.js';
 import messagingServicesRouter from './routes/messagingServices.js';
 import sendsRouter from './routes/sends.js';
+import webhooksRouter from './routes/webhooks.js';
 
 export function buildApp({ serveStatic = false, webDir = null } = {}) {
   const logger = pino({
@@ -38,6 +39,10 @@ export function buildApp({ serveStatic = false, webDir = null } = {}) {
   });
 
   app.get('/health', (_req, res) => res.json({ ok: true }));
+
+  // PUBLIC — Twilio webhook. NOT behind verifyFirebaseToken. Signature-validated
+  // per request using the per-tenant decrypted auth token.
+  app.use('/webhooks', webhooksRouter);
 
   app.use('/tenant', verifyFirebaseToken, tenantRouter);
   app.use('/contact-lists', verifyFirebaseToken, contactListsRouter);

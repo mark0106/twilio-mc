@@ -58,6 +58,10 @@
       {
         "source": "/sends/**",
         "function": { "functionId": "api", "region": "us-central1" }
+      },
+      {
+        "source": "/webhooks/**",
+        "function": { "functionId": "api", "region": "us-central1" }
       }
     ]
   },

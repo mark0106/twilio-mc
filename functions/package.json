@@ -14,6 +14,7 @@
     "emulate": "firebase emulators:start --only functions,hosting"
   },
   "dependencies": {
+    "bottleneck": "^2.19.5",
     "busboy": "^1.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
