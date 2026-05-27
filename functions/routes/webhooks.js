@@ -6,8 +6,12 @@ import twilio from 'twilio';
 import { FieldValue } from 'firebase-admin/firestore';
 import { db } from '../firebase.js';
 import { decrypt } from '../crypto.js';
-import { mapTwilioStatus, canTransition } from '../sendsStateMachine.js';
-import { shardRef } from '../counterShards.js';
+import {
+  mapTwilioStatus,
+  canTransition,
+  DONE_FOR_SEND_COMPLETION,
+} from '../sendsStateMachine.js';
+import { shardRef, SHARD_COUNT } from '../counterShards.js';
 import { PUBLIC_BASE_URL } from '../config.js';
 
 const router = Router();
@@ -17,6 +21,62 @@ const router = Router();
 // but we attach urlencoded() here too so local-dev (where the request flows
 // through Express normally) also works.
 router.use(urlencoded({ extended: false, limit: '256kb' }));
+
+// After a successful recipient transition, see if the parent send doc needs
+// its own status to advance.
+//
+// scheduled → sending: the moment Twilio starts delivering scheduled messages
+// (any queued → X transition happens), we flip the send out of 'scheduled'.
+//
+// sending → sent: when every recipient has reached a 'done' state (delivered,
+// read, failed, undelivered, blocked, canceled — i.e. nothing in queued or
+// in-flight 'sent'), we mark the send complete. Reads all 50 counter shards
+// once per terminal transition; that's acceptable for our scale.
+async function maybeAdvanceSendStatus({
+  sendRef,
+  tenantId,
+  sendId,
+  fromStatus,
+  toStatus,
+}) {
+  // First: scheduled → sending (cheap — single doc read)
+  if (fromStatus === 'queued') {
+    const snap = await sendRef.get();
+    if (snap.exists && snap.data()?.status === 'scheduled') {
+      await sendRef.update({
+        status: 'sending',
+        deliveryStartedAt: FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  // Second: maybe-completion check on terminal transitions only.
+  if (!DONE_FOR_SEND_COMPLETION.has(toStatus)) return;
+
+  const shardsRef = sendRef.collection('counterShards');
+  const shardsSnap = await shardsRef.get();
+  let inFlight = 0;
+  for (const d of shardsSnap.docs) {
+    const data = d.data();
+    inFlight += (data.queued || 0) + (data.sent || 0);
+  }
+  if (inFlight > 0) return;
+
+  // All recipients are done. Promote send to 'sent' if it's currently in
+  // a non-terminal state (sending or scheduled). Transactional so concurrent
+  // webhooks don't double-write.
+  await db.runTransaction(async (tx) => {
+    const sendSnap = await tx.get(sendRef);
+    if (!sendSnap.exists) return;
+    const status = sendSnap.data()?.status;
+    if (status === 'sending' || status === 'scheduled') {
+      tx.update(sendRef, {
+        status: 'sent',
+        sentAt: FieldValue.serverTimestamp(),
+      });
+    }
+  });
+}
 
 async function decryptTenantAuthToken(tenantId) {
   const snap = await db.collection('tenants').doc(tenantId).get();
@@ -77,13 +137,12 @@ router.post('/twilio/status/:tenantId/:sendId', async (req, res) => {
       return res.status(200).send('ignored');
     }
 
-    const recipientRef = db
+    const sendRef = db
       .collection('tenants')
       .doc(tenantId)
       .collection('singleSends')
-      .doc(sendId)
-      .collection('recipients')
-      .doc(messageSid);
+      .doc(sendId);
+    const recipientRef = sendRef.collection('recipients').doc(messageSid);
 
     const result = await db.runTransaction(async (tx) => {
       const snap = await tx.get(recipientRef);
@@ -114,6 +173,28 @@ router.post('/twilio/status/:tenantId/:sendId', async (req, res) => {
 
       return { applied: true, fromStatus, to: internalStatus };
     });
+
+    // Send-level status transitions:
+    //   queued → X on a 'scheduled' send  → flip send to 'sending'
+    //   any 'done' transition + no recipients left in-flight → flip to 'sent'
+    if (result.applied) {
+      try {
+        await maybeAdvanceSendStatus({
+          sendRef,
+          tenantId,
+          sendId,
+          fromStatus: result.fromStatus,
+          toStatus: result.to,
+        });
+      } catch (advErr) {
+        // Non-fatal — the recipient was updated successfully; the next
+        // webhook can pick up the status advance.
+        req.log?.warn(
+          { err: advErr.message, tenantId, sendId },
+          'send-level status advance failed'
+        );
+      }
+    }
 
     req.log?.info(
       {

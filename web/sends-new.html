@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
+  <body class="app">
     <header></header>
-    <main class="composer wide">
+    <main class="composer wide bleed">
       <section class="composer-form">
         <div class="toolbar">
           <h2>New Single Send</h2>
@@ -46,6 +46,9 @@
             </div>
             <span class="encoding-badge" id="encoding-badge">GSM-7</span>
           </div>
+          <p class="muted" style="margin: 8px 0 0; font-size: 12px;">
+            Personalize with <code>{name}</code> (first name) or <code>{lastName}</code>. Each recipient sees their own value substituted in.
+          </p>
         </div>
 
         <div class="composer-section">

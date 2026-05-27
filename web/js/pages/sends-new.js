@@ -350,19 +350,56 @@ els.modalConfirm.addEventListener('click', async () => {
         scheduledAt: getScheduledIso(),
       },
     });
-    // Phase 3: just confirm the draft. Phase 4 wires the actual fan-out.
-    const confirm = await apiFetch(`/sends/${create.sendId}/confirm`, {
-      method: 'POST',
-    });
-    els.modal.classList.add('hidden');
-    showError(els.errorEl, '');
-    els.errorEl.classList.add('success');
-    els.errorEl.classList.remove('error');
-    showError(
-      els.errorEl,
-      `Draft created and marked ${confirm.status}. (Actual sending arrives in Phase 4.)`
-    );
+    await apiFetch(`/sends/${create.sendId}/confirm`, { method: 'POST' });
+
+    // Replace the modal contents with a success card, then redirect.
+    const scheduled = !!getScheduledIso();
+    const headline = scheduled ? 'Single Send scheduled!' : 'Single Send created!';
+    const subline = scheduled
+      ? 'Twilio is holding the messages until your scheduled time. Track delivery in Single Sends.'
+      : 'Fan-out has started. Track live delivery progress in Single Sends.';
+    const modal = els.modal.querySelector('.modal');
+    modal.innerHTML = `
+      <div style="text-align:center; padding: 12px 0;">
+        <div class="success-check" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="56" height="56">
+            <circle cx="24" cy="24" r="22" fill="none" stroke="#059669" stroke-width="3" />
+            <path d="M14 25 L21 32 L34 17" fill="none" stroke="#059669" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <h2 style="margin: 14px 0 6px;">${headline}</h2>
+        <p class="muted" style="margin: 0 0 12px;">${subline}</p>
+        <button class="button" id="success-go" type="button" style="margin-top: 4px;">View Single Sends</button>
+        <p class="muted" style="font-size: 12px; margin: 10px 0 0;" id="success-countdown">Redirecting…</p>
+      </div>
+    `;
     els.reviewBtn.disabled = true;
+
+    // Manual fallback in case the auto-redirect is blocked by the browser
+    // or the View Transitions handoff hiccups.
+    const goBtn = document.getElementById('success-go');
+    const goNow = () => {
+      // Bypass View Transitions for this navigation to avoid any
+      // edge case where it stalls — use assign() which is the most explicit.
+      window.location.assign('/sends.html');
+    };
+    goBtn.addEventListener('click', goNow);
+
+    // Countdown + auto-navigate. Updates the helper line so the user can
+    // see something is happening, even if redirect is delayed.
+    let seconds = 2;
+    const countdownEl = document.getElementById('success-countdown');
+    countdownEl.textContent = `Redirecting in ${seconds}s…`;
+    const interval = setInterval(() => {
+      seconds--;
+      if (seconds > 0) {
+        countdownEl.textContent = `Redirecting in ${seconds}s…`;
+      } else {
+        clearInterval(interval);
+        countdownEl.textContent = 'Redirecting now…';
+        goNow();
+      }
+    }, 1000);
   } catch (err) {
     showError(
       els.modalError,
@@ -370,7 +407,6 @@ els.modalConfirm.addEventListener('click', async () => {
         ? `Failed: ${err.details.error}`
         : err.message || 'Confirm failed'
     );
-  } finally {
     els.modalConfirm.disabled = false;
     els.modalConfirm.textContent = 'Confirm Send';
   }

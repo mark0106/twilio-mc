@@ -7,6 +7,8 @@ import {
 import { db } from '../firebase-init.js';
 import { requireUser } from '../auth.js';
 import { renderNav } from '../nav.js';
+import { apiFetch } from '../api.js';
+import { confirmDialog, alertDialog } from '../modal.js';
 
 const user = await requireUser();
 renderNav(user);
@@ -94,15 +96,26 @@ function render(docs) {
   bodyEl.querySelectorAll('[data-delete]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-delete');
-      if (!confirm('Delete this list and all its contacts? This cannot be undone.')) return;
+      const ok = await confirmDialog({
+        title: 'Delete this contact list?',
+        message:
+          'The list and all its contacts will be permanently removed. This cannot be undone.',
+        confirmText: 'Delete list',
+        cancelText: 'Keep list',
+        danger: true,
+      });
+      if (!ok) return;
       btn.disabled = true;
       btn.textContent = 'Deleting…';
-      const { apiFetch } = await import('../api.js');
       try {
         await apiFetch(`/contact-lists/${id}`, { method: 'DELETE' });
         // Snapshot will fire and re-render.
       } catch (err) {
-        alert('Delete failed: ' + (err.message || 'unknown'));
+        await alertDialog({
+          title: 'Delete failed',
+          message: err.message || 'Could not delete this contact list.',
+          kind: 'danger',
+        });
         btn.disabled = false;
         btn.textContent = 'Delete';
       }

@@ -42,12 +42,16 @@ export function buildApp({ serveStatic = false, webDir = null } = {}) {
 
   // PUBLIC — Twilio webhook. NOT behind verifyFirebaseToken. Signature-validated
   // per request using the per-tenant decrypted auth token.
+  // Kept at /webhooks/* (no /api prefix) so the URL Twilio posts to is short.
   app.use('/webhooks', webhooksRouter);
 
-  app.use('/tenant', verifyFirebaseToken, tenantRouter);
-  app.use('/contact-lists', verifyFirebaseToken, contactListsRouter);
-  app.use('/messaging-services', verifyFirebaseToken, messagingServicesRouter);
-  app.use('/sends', verifyFirebaseToken, sendsRouter);
+  // All authenticated API routes live under /api/* so they don't collide with
+  // Firebase Hosting's cleanUrls behavior (which would otherwise serve
+  // sends.html for POST /sends, contacts.html for /contacts, etc.).
+  app.use('/api/tenant', verifyFirebaseToken, tenantRouter);
+  app.use('/api/contact-lists', verifyFirebaseToken, contactListsRouter);
+  app.use('/api/messaging-services', verifyFirebaseToken, messagingServicesRouter);
+  app.use('/api/sends', verifyFirebaseToken, sendsRouter);
 
   if (serveStatic && webDir) {
     app.use(express.static(webDir, { extensions: ['html'] }));

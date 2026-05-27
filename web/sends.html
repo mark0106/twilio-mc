@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Single Sends · SMS Campaigns</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="app">
+    <header></header>
+    <main class="wide bleed">
+      <div class="toolbar">
+        <h2>Single Sends</h2>
+        <a class="button" href="/sends-new.html">New Single Send</a>
+      </div>
+
+      <div class="filter-bar">
+        <label class="muted" for="filter-status" style="margin:0">Status</label>
+        <select id="filter-status">
+          <option value="">All</option>
+          <option value="draft">Draft</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="sending">Sending</option>
+          <option value="sent">Sent</option>
+          <option value="canceled">Canceled</option>
+          <option value="failed">Failed</option>
+        </select>
+      </div>
+
+      <div id="loading" class="muted">Loading…</div>
+
+      <table class="lists hidden" id="sends-table">
+        <thead>
+          <tr>
+            <th>Single Send Name</th>
+            <th>Status</th>
+            <th class="right">Sent</th>
+            <th class="right">Delivered</th>
+            <th class="right">Failed</th>
+            <th class="right">Undelivered</th>
+            <th class="right">Blocked</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody id="sends-body"></tbody>
+      </table>
+
+      <div class="empty hidden" id="empty">
+        <p>No Single Sends yet.</p>
+        <a class="button" href="/sends-new.html">Create your first Single Send</a>
+      </div>
+    </main>
+    <script type="module" src="/js/pages/sends.js"></script>
+  </body>
+</html>

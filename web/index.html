@@ -2,25 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>SMS Campaigns</title>
+    <title>InvestPub SMS Campaigns</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="icon" type="image/png" href="/images/logo.png" />
   </head>
   <body>
-    <header>
-      <h1>SMS Campaigns</h1>
-      <nav>
-        <a href="/login.html">Log in</a>
-        <a href="/signup.html">Sign up</a>
-      </nav>
-    </header>
-    <main>
-      <h2>Welcome</h2>
+    <main class="auth-card">
+      <img class="auth-logo" src="/images/logo.png" alt="InvestPub" />
+      <h2>SMS Campaigns</h2>
       <p class="muted">
-        Twilio SMS marketing campaigns. Bring your own Twilio Account SID and
-        Auth Token, and send through your own Messaging Services.
+        Send Twilio SMS marketing campaigns through your own Messaging Services.
+        Bring your own Account SID and Auth Token.
       </p>
-      <p><a class="link" href="/signup.html">Create an account</a> or <a class="link" href="/login.html">log in</a>.</p>
+      <div style="display:flex; gap:10px; justify-content:center; margin-top: 24px;">
+        <a class="button" href="/signup.html">Create an account</a>
+        <a class="button secondary" href="/login.html">Log in</a>
+      </div>
     </main>
     <script type="module">
       import { onAuthReady } from '/js/auth.js';

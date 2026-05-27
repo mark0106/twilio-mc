@@ -1,8 +1,15 @@
 import { getIdToken } from './auth.js';
 
+// All backend routes live under /api/** so Firebase Hosting's cleanUrls
+// doesn't intercept paths like /sends and serve the matching static page.
+export const API_BASE = '/api';
+
 export async function apiFetch(path, { method = 'GET', body, headers = {} } = {}) {
   const token = await getIdToken();
-  const res = await fetch(path, {
+  const url = path.startsWith('/api/') || path.startsWith('http')
+    ? path
+    : API_BASE + path;
+  const res = await fetch(url, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,

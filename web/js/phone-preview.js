@@ -4,14 +4,19 @@
 
 const STYLE = `
 .pp-frame {
-  width: 290px;
+  width: 100%;
+  max-width: 290px;
+  margin: 0 auto;
   background: #f2f2f7;
-  border: 1px solid #d1d5db;
+  border: 1px solid rgba(17, 17, 17, 0.08);
   border-radius: 28px;
   padding: 10px 8px 14px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   position: sticky;
   top: 24px;
+  box-shadow:
+    0 4px 12px rgba(17, 17, 17, 0.06),
+    0 16px 40px rgba(17, 17, 17, 0.10);
 }
 .pp-notch {
   margin: 0 auto 8px;

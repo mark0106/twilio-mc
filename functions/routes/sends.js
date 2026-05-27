@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import Bottleneck from 'bottleneck';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { db } from '../firebase.js';
 import {
@@ -9,6 +10,9 @@ import {
 import { computeSegments } from '../segments.js';
 import { normalizePhone } from '../phone.js';
 import { prepareSendForLaunch } from '../jobs/sendCampaign.js';
+import { describeError } from '../twilioErrorCodes.js';
+import { renderTemplateForTest } from '../template.js';
+import { shardRef } from '../counterShards.js';
 
 const router = Router();
 
@@ -41,10 +45,13 @@ router.post('/test', async (req, res, next) => {
     if (!e164) return res.status(400).json({ error: 'invalid_phone_to' });
 
     const { client } = await buildClientForTenant(req.user.uid);
+    // Substitute template tokens with friendly placeholders for the test so
+    // the recipient doesn't receive the literal "{name}" string.
+    const renderedBody = renderTemplateForTest(body);
     const msg = await client.messages.create({
       to: e164,
       messagingServiceSid,
-      body,
+      body: renderedBody,
     });
     res.json({ sid: msg.sid, status: msg.status, to: e164 });
   } catch (err) {
@@ -205,6 +212,174 @@ router.post('/:id/confirm', async (req, res, next) => {
     if (err.message === 'contact_list_not_found') {
       return res.status(400).json({ error: 'contact_list_not_found' });
     }
+    next(err);
+  }
+});
+
+// POST /sends/:id/cancel  — cancels every still-queued Twilio message for
+// this send. Only valid while the send is 'scheduled' (i.e., all messages
+// were handed to Twilio with sendAt but delivery hasn't started yet).
+//
+// For each recipient still in 'queued' state we ask Twilio to cancel via
+// messages(sid).update({ status: 'canceled' }). Already-sent messages reject
+// — we count those as 'alreadyInFlight' and move on. Recipient docs + counter
+// shards are updated atomically per cancellation.
+router.post('/:id/cancel', async (req, res, next) => {
+  try {
+    const sendRef = tenantRef(req.user.uid)
+      .collection('singleSends')
+      .doc(req.params.id);
+    const snap = await sendRef.get();
+    if (!snap.exists) return res.status(404).json({ error: 'not_found' });
+    const data = snap.data();
+    if (data.status !== 'scheduled') {
+      return res
+        .status(400)
+        .json({ error: 'not_cancelable', currentStatus: data.status });
+    }
+
+    // Claim the cancel operation so a second click can't double-process.
+    await sendRef.update({ status: 'canceling' });
+
+    let client;
+    try {
+      ({ client } = await buildClientForTenant(req.user.uid));
+    } catch (err) {
+      // Restore status if we can't even build a client.
+      await sendRef.update({ status: 'scheduled' });
+      if (err instanceof TwilioNotConnectedError) {
+        return res.status(400).json({ error: 'twilio_not_connected' });
+      }
+      throw err;
+    }
+
+    const limiter = new Bottleneck({ minTime: 50, maxConcurrent: 10 });
+    const recipientsRef = sendRef.collection('recipients');
+
+    let canceledCount = 0;
+    let alreadyInFlight = 0;
+    let cursor = null;
+    const PAGE = 500;
+
+    while (true) {
+      let q = recipientsRef
+        .where('status', '==', 'queued')
+        .orderBy('__name__')
+        .limit(PAGE);
+      if (cursor) q = q.startAfter(cursor);
+      const page = await q.get();
+      if (page.empty) break;
+
+      const tasks = page.docs.map((d) =>
+        limiter.schedule(async () => {
+          const messageSid = d.id;
+          try {
+            await client.messages(messageSid).update({ status: 'canceled' });
+          } catch (twErr) {
+            // Twilio rejected — typically because the message has already
+            // moved past 'scheduled' state. Count it and skip.
+            if (twErr.status === 400 || twErr.status === 409) {
+              alreadyInFlight++;
+              return;
+            }
+            throw twErr;
+          }
+
+          // Transactional state + counter update so we don't double-count if
+          // the webhook for 'canceled' races us.
+          await db.runTransaction(async (tx) => {
+            const fresh = await tx.get(d.ref);
+            if (!fresh.exists) return;
+            const recipient = fresh.data();
+            if (recipient.status !== 'queued') return; // raced past us
+            tx.update(d.ref, {
+              status: 'canceled',
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+            tx.update(
+              shardRef(req.user.uid, req.params.id, recipient.shardId),
+              {
+                queued: FieldValue.increment(-1),
+                canceled: FieldValue.increment(1),
+              }
+            );
+          });
+          canceledCount++;
+        })
+      );
+
+      await Promise.allSettled(tasks);
+
+      cursor = page.docs[page.docs.length - 1];
+      if (page.docs.length < PAGE) break;
+    }
+
+    await sendRef.update({
+      status: 'canceled',
+      canceledAt: FieldValue.serverTimestamp(),
+    });
+
+    res.json({ canceled: canceledCount, alreadyInFlight });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /sends/:id/export.csv  — streams every recipient row as a CSV.
+// Paginated cursor-read so the function memory doesn't grow with list size.
+function csvEscape(value) {
+  const s = value == null ? '' : String(value);
+  if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+router.get('/:id/export.csv', async (req, res, next) => {
+  try {
+    const sendRef = tenantRef(req.user.uid)
+      .collection('singleSends')
+      .doc(req.params.id);
+    const sendSnap = await sendRef.get();
+    if (!sendSnap.exists) return res.status(404).json({ error: 'not_found' });
+    const send = sendSnap.data();
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${(send.name || 'send').replace(/[^a-z0-9_-]/gi, '_')}-${req.params.id}.csv"`
+    );
+
+    res.write(
+      'to,status,messageSid,errorCode,errorDescription,errorMessage,updatedAt\n'
+    );
+
+    const recipientsRef = sendRef.collection('recipients');
+    const PAGE = 500;
+    let cursor = null;
+    while (true) {
+      let q = recipientsRef.orderBy('__name__').limit(PAGE);
+      if (cursor) q = q.startAfter(cursor);
+      const snap = await q.get();
+      if (snap.empty) break;
+      for (const doc of snap.docs) {
+        const d = doc.data();
+        const row = [
+          csvEscape(d.to),
+          csvEscape(d.status),
+          csvEscape(doc.id),
+          csvEscape(d.errorCode ?? ''),
+          csvEscape(d.errorCode ? describeError(d.errorCode) : ''),
+          csvEscape(d.errorMessage ?? ''),
+          csvEscape(d.updatedAt?.toDate?.()?.toISOString?.() ?? ''),
+        ].join(',');
+        res.write(row + '\n');
+      }
+      cursor = snap.docs[snap.docs.length - 1];
+      if (snap.docs.length < PAGE) break;
+    }
+    res.end();
+  } catch (err) {
     next(err);
   }
 });

@@ -9,6 +9,7 @@ import { db } from '../firebase-init.js';
 import { requireUser } from '../auth.js';
 import { renderNav } from '../nav.js';
 import { apiFetch } from '../api.js';
+import { confirmDialog, alertDialog } from '../modal.js';
 
 const user = await requireUser();
 renderNav(user);
@@ -155,14 +156,26 @@ onSnapshot(
 );
 
 deleteBtn.addEventListener('click', async () => {
-  if (!confirm('Delete this list and all its contacts? This cannot be undone.')) return;
+  const ok = await confirmDialog({
+    title: 'Delete this contact list?',
+    message:
+      'The list and all its contacts will be permanently removed. This cannot be undone.',
+    confirmText: 'Delete list',
+    cancelText: 'Keep list',
+    danger: true,
+  });
+  if (!ok) return;
   deleteBtn.disabled = true;
   deleteBtn.textContent = 'Deleting…';
   try {
     await apiFetch(`/contact-lists/${listId}`, { method: 'DELETE' });
     window.location.href = '/contacts.html';
   } catch (err) {
-    alert('Delete failed: ' + (err.message || 'unknown'));
+    await alertDialog({
+      title: 'Delete failed',
+      message: err.message || 'Could not delete this contact list.',
+      kind: 'danger',
+    });
     deleteBtn.disabled = false;
     deleteBtn.textContent = 'Delete';
   }

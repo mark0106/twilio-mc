@@ -9,21 +9,40 @@ export const INTERNAL_STATUSES = [
   'queued',
   'sent',
   'delivered',
+  'read',
   'failed',
   'undelivered',
   'blocked',
+  'canceled',
 ];
 
+// States from which no further forward transition is allowed.
+// `delivered` is NOT here because RCS can fire a `read` receipt afterward.
 export const TERMINAL_STATES = new Set([
-  'delivered',
+  'read',
   'failed',
   'undelivered',
   'blocked',
+  'canceled',
+]);
+
+// "Done-enough" states for send-level completion math. Once every recipient
+// has reached one of these (i.e. is no longer queued or in-flight), the send
+// is considered complete. We include `delivered` even though it can later
+// flip to `read` — read receipts are bonus, the send is done either way.
+export const DONE_FOR_SEND_COMPLETION = new Set([
+  'delivered',
+  'read',
+  'failed',
+  'undelivered',
+  'blocked',
+  'canceled',
 ]);
 
 const ALLOWED = {
-  queued: new Set(['sent', 'delivered', 'failed', 'undelivered', 'blocked']),
-  sent: new Set(['delivered', 'failed', 'undelivered', 'blocked']),
+  queued: new Set(['sent', 'delivered', 'read', 'failed', 'undelivered', 'blocked', 'canceled']),
+  sent: new Set(['delivered', 'read', 'failed', 'undelivered', 'blocked']),
+  delivered: new Set(['read']),
 };
 
 export function canTransition(from, to) {
@@ -56,11 +75,14 @@ export function mapTwilioStatus(twilioStatus, errorCode) {
       if (code === 30003 || code === 30004 || code === 30005) return 'undelivered';
       return 'undelivered';
     case 'read':
-      // Treat 'read' the same as delivered — it's a post-delivery refinement
-      // that arrives only on platforms that send read receipts.
-      return 'delivered';
+      // RCS read receipt — a post-delivery refinement, only arrives on
+      // platforms that support it. Tracked as its own status so the user
+      // can see actual engagement separately from delivery.
+      return 'read';
+    case 'canceled':
+      return 'canceled';
     default:
-      // accepted, sending, scheduled, canceled, queued — no state advance.
+      // accepted, sending, scheduled, queued — no state advance.
       return null;
   }
 }

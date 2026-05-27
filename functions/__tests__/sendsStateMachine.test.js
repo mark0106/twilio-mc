@@ -12,6 +12,35 @@ describe('canTransition', () => {
     expect(canTransition('queued', 'failed')).toBe(true);
     expect(canTransition('queued', 'undelivered')).toBe(true);
     expect(canTransition('queued', 'blocked')).toBe(true);
+    expect(canTransition('queued', 'canceled')).toBe(true);
+  });
+
+  test('sent cannot transition to canceled (already in flight)', () => {
+    expect(canTransition('sent', 'canceled')).toBe(false);
+  });
+
+  test('canceled is terminal', () => {
+    expect(canTransition('canceled', 'delivered')).toBe(false);
+    expect(canTransition('canceled', 'sent')).toBe(false);
+  });
+
+  test('delivered → read is allowed (RCS receipt)', () => {
+    expect(canTransition('delivered', 'read')).toBe(true);
+  });
+
+  test('delivered cannot go to anything except read', () => {
+    expect(canTransition('delivered', 'sent')).toBe(false);
+    expect(canTransition('delivered', 'failed')).toBe(false);
+    expect(canTransition('delivered', 'delivered')).toBe(false);
+  });
+
+  test('read is terminal', () => {
+    expect(canTransition('read', 'delivered')).toBe(false);
+    expect(canTransition('read', 'sent')).toBe(false);
+  });
+
+  test('queued can go straight to read (instant RCS delivery)', () => {
+    expect(canTransition('queued', 'read')).toBe(true);
   });
 
   test('sent can only advance to terminal states', () => {
@@ -51,8 +80,8 @@ describe('mapTwilioStatus', () => {
     expect(mapTwilioStatus('sent')).toBe('sent');
   });
 
-  test('read maps to delivered', () => {
-    expect(mapTwilioStatus('read')).toBe('delivered');
+  test('read maps to its own status (RCS read receipt)', () => {
+    expect(mapTwilioStatus('read')).toBe('read');
   });
 
   test('failed with 30007 maps to blocked (opt-out)', () => {
@@ -82,10 +111,13 @@ describe('mapTwilioStatus', () => {
     expect(mapTwilioStatus('failed', '30007')).toBe('blocked');
   });
 
+  test('twilio canceled maps to canceled', () => {
+    expect(mapTwilioStatus('canceled')).toBe('canceled');
+  });
+
   test('non-tracked statuses return null', () => {
     expect(mapTwilioStatus('accepted')).toBeNull();
     expect(mapTwilioStatus('queued')).toBeNull();
-    expect(mapTwilioStatus('canceled')).toBeNull();
     expect(mapTwilioStatus('whatever')).toBeNull();
   });
 });

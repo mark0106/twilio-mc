@@ -131,7 +131,7 @@ formEl.addEventListener('submit', async (e) => {
     formData.append('csv', selectedFile);
 
     const region = encodeURIComponent(regionInput.value || 'US');
-    const res = await fetch(`/contact-lists?region=${region}`, {
+    const res = await fetch(`/api/contact-lists?region=${region}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: formData,

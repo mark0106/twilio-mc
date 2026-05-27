@@ -28,39 +28,15 @@
     "cleanUrls": true,
     "rewrites": [
       {
-        "source": "/health",
-        "function": { "functionId": "api", "region": "us-central1" }
-      },
-      {
-        "source": "/tenant/**",
-        "function": { "functionId": "api", "region": "us-central1" }
-      },
-      {
-        "source": "/contact-lists/**",
-        "function": { "functionId": "api", "region": "us-central1" }
-      },
-      {
-        "source": "/contact-lists",
-        "function": { "functionId": "api", "region": "us-central1" }
-      },
-      {
-        "source": "/messaging-services",
-        "function": { "functionId": "api", "region": "us-central1" }
-      },
-      {
-        "source": "/messaging-services/**",
-        "function": { "functionId": "api", "region": "us-central1" }
-      },
-      {
-        "source": "/sends",
-        "function": { "functionId": "api", "region": "us-central1" }
-      },
-      {
-        "source": "/sends/**",
+        "source": "/api/**",
         "function": { "functionId": "api", "region": "us-central1" }
       },
       {
         "source": "/webhooks/**",
+        "function": { "functionId": "api", "region": "us-central1" }
+      },
+      {
+        "source": "/health",
         "function": { "functionId": "api", "region": "us-central1" }
       }
     ]

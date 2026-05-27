@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Single Send · SMS Campaigns</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="app">
+    <header></header>
+    <main class="wide bleed">
+      <div class="toolbar">
+        <h2 id="send-name">Single Send</h2>
+        <div>
+          <a class="button secondary" href="/sends.html">Back</a>
+          <button class="button secondary" id="export-btn">Export CSV</button>
+          <button class="button danger hidden" id="cancel-btn">Cancel send</button>
+        </div>
+      </div>
+
+      <div id="loading" class="muted">Loading…</div>
+
+      <div id="content" class="hidden">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:8px">
+          <span id="status-pill" class="status-pill">—</span>
+          <span class="muted" id="recipient-count"></span>
+          <span id="schedule-banner" class="scheduled-info hidden"></span>
+        </div>
+
+        <div class="tiles" id="tiles">
+          <div class="tile queued"><div class="label">Queued</div><div class="value" data-counter="queued">0</div></div>
+          <div class="tile sent"><div class="label">Sent</div><div class="value" data-counter="sent">0</div></div>
+          <div class="tile delivered"><div class="label">Delivered</div><div class="value" data-counter="delivered">0</div></div>
+          <div class="tile read"><div class="label">Read</div><div class="value" data-counter="read">0</div></div>
+          <div class="tile failed"><div class="label">Failed</div><div class="value" data-counter="failed">0</div></div>
+          <div class="tile undelivered"><div class="label">Undelivered</div><div class="value" data-counter="undelivered">0</div></div>
+          <div class="tile blocked"><div class="label">Blocked</div><div class="value" data-counter="blocked">0</div></div>
+          <div class="tile canceled"><div class="label">Canceled</div><div class="value" data-counter="canceled">0</div></div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" data-tab="overview">Overview</button>
+          <button class="tab" data-tab="recipients">Recipients</button>
+          <button class="tab" data-tab="errors">Errors</button>
+        </div>
+
+        <section data-pane="overview">
+          <div class="meta-grid" id="meta-grid"></div>
+          <p class="muted" style="margin: 18px 0 4px">Message body:</p>
+          <div class="body-preview" id="body-preview"></div>
+        </section>
+
+        <section data-pane="recipients" class="hidden">
+          <div class="filter-bar">
+            <label class="muted" for="filter-recipients" style="margin:0">Status</label>
+            <select id="filter-recipients">
+              <option value="">All</option>
+              <option value="queued">Queued</option>
+              <option value="sent">Sent</option>
+              <option value="delivered">Delivered</option>
+              <option value="read">Read</option>
+              <option value="failed">Failed</option>
+              <option value="undelivered">Undelivered</option>
+              <option value="blocked">Blocked</option>
+              <option value="canceled">Canceled</option>
+            </select>
+            <span class="muted" id="recipients-info"></span>
+          </div>
+          <table class="recipients-table" id="recipients-table">
+            <thead>
+              <tr>
+                <th>To</th>
+                <th>Status</th>
+                <th>Message SID</th>
+                <th>Error</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody id="recipients-body"></tbody>
+          </table>
+          <div class="pagination">
+            <button class="button secondary" id="recipients-prev" disabled>Prev</button>
+            <button class="button secondary" id="recipients-next">Next</button>
+            <span class="muted" id="recipients-page-info"></span>
+          </div>
+        </section>
+
+        <section data-pane="errors" class="hidden">
+          <p class="muted">Recipients with status <code>failed</code>, <code>undelivered</code>, or <code>blocked</code>.</p>
+          <table class="recipients-table" id="errors-table">
+            <thead>
+              <tr>
+                <th>To</th>
+                <th>Status</th>
+                <th>Code</th>
+                <th>Description</th>
+                <th>Twilio message</th>
+              </tr>
+            </thead>
+            <tbody id="errors-body"></tbody>
+          </table>
+          <p class="muted" id="errors-info" style="margin-top:10px"></p>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="/js/pages/sends-detail.js"></script>
+  </body>
+</html>

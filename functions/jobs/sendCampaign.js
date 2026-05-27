@@ -12,6 +12,7 @@ import {
   PUBLIC_BASE_URL,
   TWILIO_SEND_RATE_PER_SECOND,
 } from '../config.js';
+import { renderTemplate } from '../template.js';
 
 const PAGE_SIZE = 500;
 const PROGRESS_BATCH_SIZE = 100;
@@ -86,7 +87,10 @@ export async function runSendCampaign({ tenantId, sendId, log = console }) {
     // promises in memory at once.
     const tasks = snap.docs.map((doc) => {
       const contactId = doc.id;
-      const phone = doc.data().phone;
+      const contactData = doc.data();
+      const phone = contactData.phone;
+      // Render per-recipient personalization tokens like {name} → firstName.
+      const personalizedBody = renderTemplate(send.body, contactData);
 
       return limiter.schedule(async () => {
         let msg;
@@ -94,7 +98,7 @@ export async function runSendCampaign({ tenantId, sendId, log = console }) {
           msg = await client.messages.create({
             to: phone,
             messagingServiceSid: send.messagingServiceSid,
-            body: send.body,
+            body: personalizedBody,
             statusCallback,
             ...scheduleArgs,
           });
@@ -160,16 +164,38 @@ export async function runSendCampaign({ tenantId, sendId, log = console }) {
     if (snap.docs.length < PAGE_SIZE) break;
   }
 
-  await sendRef.update({
-    status: 'sent',
-    sentAt: FieldValue.serverTimestamp(),
+  // Post-fan-out status logic:
+  //   - If nothing actually got queued (empty list or all messages.create
+  //     failed), there's no delivery progress to wait on → status='sent'.
+  //   - If scheduled, surface 'scheduled' so the user sees Twilio is holding
+  //     them. The webhook handler will advance to 'sending' when delivery
+  //     starts and 'sent' when it finishes.
+  //   - Otherwise (immediate send with queued messages) we leave the status
+  //     as 'sending' (set by the confirm endpoint). The webhook handler
+  //     flips it to 'sent' when all recipients reach a done state.
+  const isScheduled = !!send.scheduledAt;
+  const updates = {
+    fanOutCompletedAt: FieldValue.serverTimestamp(),
     processedQueued: totalQueued,
     processedFailed: totalFailed,
-  });
+  };
+  if (totalQueued === 0) {
+    updates.status = 'sent';
+    updates.sentAt = FieldValue.serverTimestamp();
+  } else if (isScheduled) {
+    updates.status = 'scheduled';
+  }
+  await sendRef.update(updates);
 
   log.info?.(
-    { tenantId, sendId, queued: totalQueued, failed: totalFailed },
-    'send campaign complete'
+    {
+      tenantId,
+      sendId,
+      queued: totalQueued,
+      failed: totalFailed,
+      finalStatus: updates.status || 'sending',
+    },
+    'send campaign fan-out complete'
   );
 }
 
