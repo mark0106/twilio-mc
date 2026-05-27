@@ -44,24 +44,35 @@ export const processSend = onDocumentUpdated(
     document: 'tenants/{tenantId}/singleSends/{sendId}',
     region: 'us-central1',
     memory: '2GiB',
-    // Eventarc background-trigger functions cap at 540s (vs HTTP's 3600s).
-    // 540s @ 10 msg/sec = 5,400 messages comfortably; for larger sends the
-    // worker resumes from processedCursor on the next trigger.
+    // Eventarc background-trigger functions cap at 540s. The worker
+    // self-yields at 480s and writes continuationNonce to trigger another
+    // invocation, so a single send can fan out across many chunks.
     timeoutSeconds: 540,
     secrets: [MASTER_ENCRYPTION_KEY],
-    retry: false, // we handle retries ourselves via the confirm endpoint
+    // retry:true so Eventarc auto-resumes after crashes / unexpected
+    // failures. The transactional lease in runSendCampaign prevents
+    // double-processing if the same event delivers twice.
+    retry: true,
   },
   async (event) => {
     const before = event.data?.before?.data();
     const after = event.data?.after?.data();
     if (!after) return;
 
-    // Only fire when status transitions FROM something else TO 'sending'.
-    // The worker writes processedCursor/processedQueued back to the same doc;
-    // those self-writes also fire this trigger but status stays 'sending'
-    // through them, so the guard prevents recursion.
+    // Two reasons we fire:
+    //   1. Initial transition into 'sending' (confirm endpoint or webhook
+    //      moving from 'scheduled' → 'sending').
+    //   2. Worker-issued continuation: status is still 'sending' but the
+    //      worker bumped continuationNonce when self-yielding.
     if (after.status !== 'sending') return;
-    if (before?.status === 'sending') return;
+
+    const wasInitialTransition =
+      before?.status !== 'sending' && after.status === 'sending';
+    const beforeNonce = before?.continuationNonce ?? 0;
+    const afterNonce = after?.continuationNonce ?? 0;
+    const isContinuation = afterNonce > beforeNonce;
+
+    if (!wasInitialTransition && !isContinuation) return;
 
     const { tenantId, sendId } = event.params;
     try {

@@ -15,16 +15,44 @@ import {
 import { renderTemplate } from '../template.js';
 
 const PAGE_SIZE = 500;
-const PROGRESS_BATCH_SIZE = 100;
+
+// How long we let the worker run before voluntarily yielding. The Cloud
+// Functions timeout is 540s; we yield at 480s to leave headroom for the
+// graceful shutdown writes (cursor + nonce) to complete.
+const WORKER_BUDGET_MS = 480 * 1000;
+
+// How long a worker holds the lease before it auto-expires. Longer than
+// WORKER_BUDGET_MS so the lease is always valid while a worker runs, but
+// not so long that a crashed worker blocks resumption for too long.
+const LEASE_DURATION_MS = 9 * 60 * 1000; // 9 minutes
+
+/**
+ * Returns true when the worker has used its time budget and should yield
+ * (persist cursor, schedule a continuation, exit cleanly).
+ *
+ * Exported for tests.
+ */
+export function shouldYield(startedAtMs, now = Date.now(), budgetMs = WORKER_BUDGET_MS) {
+  return now - startedAtMs >= budgetMs;
+}
 
 // Fans out a Single Send to Twilio. Called by the Eventarc Firestore trigger
-// when singleSends/{sendId}.status transitions to 'sending'. Designed to be
-// idempotent on restart: re-running picks up from `processedCursor`.
+// when singleSends/{sendId}.status transitions to 'sending', and again on
+// every continuationNonce bump (which the worker writes when self-yielding).
+//
+// Concurrency safety: a transactional lease (workerLeaseExpiresAt) ensures
+// only one worker processes a given send at a time. If a worker crashes the
+// lease auto-expires after LEASE_DURATION_MS and the next invocation claims.
+//
+// Restart safety: processedCursor is the resume pointer. Re-running picks up
+// where the previous left off — no duplicate Twilio calls.
 export async function runSendCampaign({ tenantId, sendId, log = console }) {
+  const startedAt = Date.now();
   const tenantRef = db.collection('tenants').doc(tenantId);
   const sendRef = tenantRef.collection('singleSends').doc(sendId);
   const recipientsRef = sendRef.collection('recipients');
 
+  // --- Pre-checks ---
   const sendSnap = await sendRef.get();
   if (!sendSnap.exists) {
     log.warn?.({ tenantId, sendId }, 'send doc gone before worker started');
@@ -41,14 +69,34 @@ export async function runSendCampaign({ tenantId, sendId, log = console }) {
     return;
   }
 
+  // --- Lease claim ---
+  // Only one worker may process a send at a time. We atomically claim a
+  // lease that auto-expires; a crashed worker can't deadlock the send.
+  const leaseClaimed = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(sendRef);
+    if (!snap.exists) return false;
+    const d = snap.data();
+    if (d.status !== 'sending') return false;
+    const expiresAt = d.workerLeaseExpiresAt?.toMillis?.() || 0;
+    if (expiresAt > Date.now()) return false; // someone else has it
+    tx.update(sendRef, {
+      workerLeaseExpiresAt: Timestamp.fromMillis(Date.now() + LEASE_DURATION_MS),
+    });
+    return true;
+  });
+  if (!leaseClaimed) {
+    log.info?.({ tenantId, sendId }, 'lease held by another worker, exiting');
+    return;
+  }
+
   const { client } = await buildClientForTenant(tenantId);
 
-  // statusCallback URL — must be the publicly-reachable one (Hosting rewrites
-  // → this same `api` HTTP function via the /webhooks/twilio/status/** route).
+  // statusCallback URL — Hosting rewrites /webhooks/twilio/status/** to the
+  // api function.
   const statusCallback = `${PUBLIC_BASE_URL}/webhooks/twilio/status/${tenantId}/${sendId}`;
 
-  // Scheduled-send args. Twilio requires sendAt + scheduleType:'fixed' with a
-  // Messaging Service (which we already enforce in the composer schema).
+  // Scheduled-send args. Twilio requires sendAt + scheduleType:'fixed' with
+  // a Messaging Service.
   const scheduleArgs = {};
   if (send.scheduledAt) {
     const sendAt = send.scheduledAt.toDate();
@@ -71,9 +119,17 @@ export async function runSendCampaign({ tenantId, sendId, log = console }) {
   let totalFailed = send.processedFailed || 0;
 
   log.info?.(
-    { tenantId, sendId, resumeFrom: lastDocId, rate: TWILIO_SEND_RATE_PER_SECOND },
-    'send campaign starting'
+    {
+      tenantId,
+      sendId,
+      resumeFrom: lastDocId,
+      rate: TWILIO_SEND_RATE_PER_SECOND,
+      alreadyQueued: totalQueued,
+    },
+    'send campaign worker started'
   );
+
+  let yielded = false;
 
   while (true) {
     let q = contactsRef.orderBy('__name__').limit(PAGE_SIZE);
@@ -83,13 +139,11 @@ export async function runSendCampaign({ tenantId, sendId, log = console }) {
     if (snap.empty) break;
 
     // Schedule all page sends through the limiter, then await the page so we
-    // get natural backpressure between pages instead of buffering 300K
-    // promises in memory at once.
+    // get natural backpressure between pages.
     const tasks = snap.docs.map((doc) => {
       const contactId = doc.id;
       const contactData = doc.data();
       const phone = contactData.phone;
-      // Render per-recipient personalization tokens like {name} → firstName.
       const personalizedBody = renderTemplate(send.body, contactData);
 
       return limiter.schedule(async () => {
@@ -103,9 +157,6 @@ export async function runSendCampaign({ tenantId, sendId, log = console }) {
             ...scheduleArgs,
           });
         } catch (err) {
-          // messages.create failed — record a synthetic recipient row so the
-          // counters reflect the failure. The doc ID is auto-generated since
-          // there's no MessageSid to key on.
           const shardId = pickShardId();
           await db.runTransaction(async (tx) => {
             const recRef = recipientsRef.doc();
@@ -126,7 +177,6 @@ export async function runSendCampaign({ tenantId, sendId, log = console }) {
           return { ok: false };
         }
 
-        // Twilio accepted the message — record recipient + bump queued shard.
         const shardId = pickShardId();
         await db.runTransaction(async (tx) => {
           tx.set(recipientsRef.doc(msg.sid), {
@@ -154,30 +204,50 @@ export async function runSendCampaign({ tenantId, sendId, log = console }) {
 
     lastDocId = snap.docs[snap.docs.length - 1].id;
 
-    // Persist cursor after each page so a restarted worker resumes from here.
+    // Persist progress after each page.
     await sendRef.update({
       processedCursor: lastDocId,
       processedQueued: totalQueued,
       processedFailed: totalFailed,
+      // Extend the lease as we work, so a slow worker doesn't lose it.
+      workerLeaseExpiresAt: Timestamp.fromMillis(Date.now() + LEASE_DURATION_MS),
     });
 
     if (snap.docs.length < PAGE_SIZE) break;
+
+    // Self-yield if we've used our time budget. Writing continuationNonce
+    // triggers a fresh worker invocation via the Firestore trigger.
+    if (shouldYield(startedAt)) {
+      await sendRef.update({
+        // Release the lease so the next worker can claim immediately.
+        workerLeaseExpiresAt: Timestamp.fromMillis(Date.now() - 1000),
+        // Bump the nonce — the Firestore trigger fires on this change and
+        // a fresh worker picks up from processedCursor.
+        continuationNonce: FieldValue.increment(1),
+      });
+      yielded = true;
+      log.info?.(
+        {
+          tenantId,
+          sendId,
+          processedQueued: totalQueued,
+          processedFailed: totalFailed,
+          elapsedMs: Date.now() - startedAt,
+        },
+        'worker self-yielding for continuation'
+      );
+      return;
+    }
   }
 
-  // Post-fan-out status logic:
-  //   - If nothing actually got queued (empty list or all messages.create
-  //     failed), there's no delivery progress to wait on → status='sent'.
-  //   - If scheduled, surface 'scheduled' so the user sees Twilio is holding
-  //     them. The webhook handler will advance to 'sending' when delivery
-  //     starts and 'sent' when it finishes.
-  //   - Otherwise (immediate send with queued messages) we leave the status
-  //     as 'sending' (set by the confirm endpoint). The webhook handler
-  //     flips it to 'sent' when all recipients reach a done state.
+  // Fan-out done for this entire send (we drained the contacts).
   const isScheduled = !!send.scheduledAt;
   const updates = {
     fanOutCompletedAt: FieldValue.serverTimestamp(),
     processedQueued: totalQueued,
     processedFailed: totalFailed,
+    // Release the lease — we're done.
+    workerLeaseExpiresAt: FieldValue.delete(),
   };
   if (totalQueued === 0) {
     updates.status = 'sent';
@@ -185,6 +255,8 @@ export async function runSendCampaign({ tenantId, sendId, log = console }) {
   } else if (isScheduled) {
     updates.status = 'scheduled';
   }
+  // Otherwise immediate-send with messages still in flight: status stays
+  // 'sending' until the webhook handler confirms every recipient is done.
   await sendRef.update(updates);
 
   log.info?.(
@@ -208,11 +280,8 @@ export async function prepareSendForLaunch({ tenantId, sendId }) {
     .collection('singleSends')
     .doc(sendId);
 
-  // Initialize 50 zeroed counter shards.
   await initCounterShards(tenantId, sendId);
 
-  // Re-read the list count in case it changed between draft creation and
-  // confirm (more contacts uploaded, deleted, etc.). Update recipientCount.
   const send = (await sendRef.get()).data();
   const listSnap = await db
     .collection('tenants')

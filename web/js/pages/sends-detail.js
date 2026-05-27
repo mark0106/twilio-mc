@@ -58,6 +58,10 @@ const els = {
   statusPill: document.getElementById('status-pill'),
   recipientCount: document.getElementById('recipient-count'),
   scheduleBanner: document.getElementById('schedule-banner'),
+  fanoutProgress: document.getElementById('fanout-progress'),
+  fanoutCounts: document.getElementById('fanout-counts'),
+  fanoutBar: document.getElementById('fanout-bar'),
+  fanoutMeta: document.getElementById('fanout-meta'),
   tiles: document.getElementById('tiles'),
   metaGrid: document.getElementById('meta-grid'),
   bodyPreview: document.getElementById('body-preview'),
@@ -145,13 +149,46 @@ function renderHeader(data) {
   } else {
     els.cancelBtn.classList.add('hidden');
   }
+
+  // Fan-out progress bar — visible while we're actively pushing messages
+  // to Twilio. processedQueued + processedFailed = total messages.create
+  // calls completed (either accepted or failed) so far.
+  const total = data.recipientCount || 0;
+  const pushed = (data.processedQueued || 0) + (data.processedFailed || 0);
+  const isFanningOut =
+    data.status === 'sending' &&
+    !data.fanOutCompletedAt &&
+    total > 0 &&
+    pushed < total;
+  if (isFanningOut) {
+    const pct = total ? Math.min(100, Math.round((pushed / total) * 100)) : 0;
+    els.fanoutBar.style.width = `${pct}%`;
+    els.fanoutCounts.textContent = `${pushed.toLocaleString()} / ${total.toLocaleString()}`;
+    // 3 MPS hardcoded here to mirror functions/.env.twilio-mc. If the
+    // server-side rate changes, change it here too.
+    const remaining = total - pushed;
+    const etaSec = remaining / 3;
+    els.fanoutMeta.textContent = `~${pct}% complete · roughly ${formatRemaining(etaSec)} of fan-out remaining at 3 MPS`;
+    els.fanoutProgress.classList.remove('hidden');
+  } else {
+    els.fanoutProgress.classList.add('hidden');
+  }
+}
+
+function formatRemaining(seconds) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '0 seconds';
+  if (seconds < 90) return `${Math.round(seconds)} seconds`;
+  const minutes = seconds / 60;
+  if (minutes < 60) return `${Math.round(minutes)} minutes`;
+  const hours = minutes / 60;
+  if (hours < 2) return `${hours.toFixed(1)} hours`;
+  return `${Math.round(hours)} hours`;
 }
 
 function renderMeta(data) {
   const rows = [
     ['Status', data.status],
     ['Messaging Service', data.messagingServiceSid],
-    ['Sender name', data.senderName || '(none)'],
     ['Contact list', `${data.contactListName || '(unknown)'} — ${(data.recipientCount || 0).toLocaleString()} recipients`],
     ['Encoding', data.encoding],
     ['Segments per message', String(data.segmentCount ?? '—')],

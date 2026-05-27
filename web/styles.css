@@ -1074,6 +1074,38 @@ input[type="datetime-local"] {
 .tile.canceled .value { color: #4b5563; }
 .recipients-table .status-cell.canceled { color: #4b5563; }
 
+.fanout-progress {
+  background: var(--brand-surface);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-card);
+  margin: 14px 0 20px;
+}
+.fanout-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+.fanout-progress-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand-ink);
+}
+.fanout-progress-counts {
+  font-size: 13px;
+  color: var(--brand-muted);
+  font-variant-numeric: tabular-nums;
+}
+.fanout-progress .progress {
+  width: 100%;
+  height: 10px;
+}
+.fanout-progress-meta {
+  font-size: 12px;
+  margin-top: 8px;
+}
+
 .scheduled-info {
   display: inline-flex;
   align-items: center;

@@ -17,7 +17,7 @@ const bodyEl = document.getElementById('sends-body');
 const emptyEl = document.getElementById('empty');
 const filterEl = document.getElementById('filter-status');
 
-const COUNTERS = ['sent', 'delivered', 'failed', 'undelivered', 'blocked'];
+const COUNTERS = ['sent', 'delivered', 'read', 'failed', 'undelivered', 'blocked'];
 
 // Track which sends are listed in the DOM and the per-row shard subscriptions
 // so we can unsubscribe when the row disappears (filter changes, doc deleted).
@@ -63,6 +63,7 @@ function buildRow(id, data) {
     <td><span class="status-pill ${data.status}">${escapeHtml(data.status || '')}</span></td>
     <td class="right" data-counter="sent">0</td>
     <td class="right" data-counter="delivered">0</td>
+    <td class="right" data-counter="read">0</td>
     <td class="right" data-counter="failed">0</td>
     <td class="right" data-counter="undelivered">0</td>
     <td class="right" data-counter="blocked">0</td>

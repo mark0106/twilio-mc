@@ -27,19 +27,25 @@ const STYLE = `
 }
 .pp-header {
   text-align: center;
-  font-size: 13px;
-  font-weight: 600;
-  color: #111827;
   padding: 6px 0 12px;
   border-bottom: 1px solid #e5e7eb;
-  word-break: break-word;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.pp-header .pp-logo {
+  height: 16px;
+  width: auto;
+  max-width: 70%;
+  display: block;
+  margin-bottom: 2px;
 }
 .pp-header .pp-subtitle {
   display: block;
   font-size: 11px;
   font-weight: 400;
   color: #9ca3af;
-  margin-top: 2px;
 }
 .pp-body {
   padding: 12px 4px 4px;
@@ -89,20 +95,18 @@ export function createPhonePreview(host) {
     <div class="pp-frame">
       <div class="pp-notch"></div>
       <div class="pp-header">
-        <span class="pp-sender">Sender</span>
+        <img class="pp-logo" src="/images/logo.png" alt="InvestPub" />
         <span class="pp-subtitle">SMS preview</span>
       </div>
       <div class="pp-body"></div>
       <div class="pp-meta"><span class="pp-segments"></span></div>
     </div>
   `;
-  const senderEl = host.querySelector('.pp-sender');
   const bodyEl = host.querySelector('.pp-body');
   const segEl = host.querySelector('.pp-segments');
 
   return {
-    update({ senderName, body, segmentCount, encoding, characterCount }) {
-      senderEl.textContent = senderName?.trim() || 'Sender name';
+    update({ body, segmentCount, encoding, characterCount }) {
       if (!body || !body.trim()) {
         bodyEl.innerHTML = '<div class="pp-empty">Type a message…</div>';
       } else {

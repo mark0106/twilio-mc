@@ -14,10 +14,23 @@ import { createPhonePreview } from '../phone-preview.js';
 const user = await requireUser();
 renderNav(user);
 
+// Server-side configured rate (functions/.env.twilio-mc). Keep in sync if you
+// change it there — only used to estimate fan-out time in the review modal.
+const TWILIO_SEND_RATE_PER_SECOND = 3;
+
+function formatDuration(seconds) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return 'less than a minute';
+  if (seconds < 90) return `about ${Math.round(seconds)} seconds`;
+  const minutes = seconds / 60;
+  if (minutes < 60) return `about ${Math.round(minutes)} minutes`;
+  const hours = minutes / 60;
+  if (hours < 2) return `about ${hours.toFixed(1)} hours`;
+  return `about ${Math.round(hours)} hours`;
+}
+
 const els = {
   notConnected: document.getElementById('not-connected'),
   name: document.getElementById('name'),
-  senderName: document.getElementById('senderName'),
   messagingService: document.getElementById('messagingService'),
   contactList: document.getElementById('contactList'),
   listMeta: document.getElementById('list-meta'),
@@ -66,7 +79,6 @@ function fmtSegmentInfo() {
   els.encodingBadge.textContent = a.encoding;
   els.encodingBadge.classList.toggle('ucs2', a.encoding === 'UCS-2');
   preview.update({
-    senderName: els.senderName.value,
     body: els.body.value,
     segmentCount: a.segments,
     encoding: a.encoding,
@@ -76,7 +88,6 @@ function fmtSegmentInfo() {
 }
 
 els.body.addEventListener('input', fmtSegmentInfo);
-els.senderName.addEventListener('input', fmtSegmentInfo);
 fmtSegmentInfo();
 
 // --- schedule control ---
@@ -314,7 +325,6 @@ els.reviewBtn.addEventListener('click', () => {
   const ms = messagingServices.find((s) => s.sid === els.messagingService.value);
 
   document.getElementById('rv-name').textContent = els.name.value.trim();
-  document.getElementById('rv-sender').textContent = els.senderName.value.trim() || '(none)';
   document.getElementById('rv-ms').textContent = ms?.friendlyName || els.messagingService.value;
   document.getElementById('rv-list').textContent = currentList.name;
   document.getElementById('rv-recipients').textContent = (currentList.count || 0).toLocaleString();
@@ -324,8 +334,12 @@ els.reviewBtn.addEventListener('click', () => {
     ? new Date(els.scheduledAt.value).toLocaleString()
     : 'Send immediately';
   document.getElementById('rv-body').textContent = els.body.value;
+  const recipients = currentList.count || 0;
+  const totalSegments = recipients * a.segments;
+  const estSeconds = recipients / TWILIO_SEND_RATE_PER_SECOND;
   document.getElementById('rv-cost').textContent =
-    `Approx ${(currentList.count || 0).toLocaleString()} × ${a.segments} = ${((currentList.count || 0) * a.segments).toLocaleString()} message segments.`;
+    `Approx ${recipients.toLocaleString()} × ${a.segments} = ${totalSegments.toLocaleString()} message segments. ` +
+    `At your account's ${TWILIO_SEND_RATE_PER_SECOND} MPS rate, full delivery will take ${formatDuration(estSeconds)}.`;
 
   els.modal.classList.remove('hidden');
 });
@@ -343,7 +357,6 @@ els.modalConfirm.addEventListener('click', async () => {
       method: 'POST',
       body: {
         name: els.name.value.trim(),
-        senderName: els.senderName.value.trim(),
         messagingServiceSid: els.messagingService.value,
         contactListId: els.contactList.value,
         body: els.body.value,

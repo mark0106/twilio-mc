@@ -27,6 +27,15 @@
           <span id="schedule-banner" class="scheduled-info hidden"></span>
         </div>
 
+        <div id="fanout-progress" class="fanout-progress hidden">
+          <div class="fanout-progress-header">
+            <span class="fanout-progress-label">Pushing to Twilio</span>
+            <span class="fanout-progress-counts" id="fanout-counts">0 / 0</span>
+          </div>
+          <div class="progress"><span id="fanout-bar" style="width: 0%"></span></div>
+          <div class="fanout-progress-meta muted" id="fanout-meta"></div>
+        </div>
+
         <div class="tiles" id="tiles">
           <div class="tile queued"><div class="label">Queued</div><div class="value" data-counter="queued">0</div></div>
           <div class="tile sent"><div class="label">Sent</div><div class="value" data-counter="sent">0</div></div>
