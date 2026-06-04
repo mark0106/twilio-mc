@@ -1,4 +1,4 @@
-# InvestPub SMS Campaigns
+# Twilio SMS Campaigns
 
 A multi-tenant Twilio SMS marketing platform. Each customer brings their own Twilio Account SID, Auth Token, and Messaging Service, and sends through their own toll-free number. The app handles fan-out, status callbacks, scheduled sends, RCS read receipts, and live counter aggregation.
 
@@ -268,7 +268,7 @@ Runs Jest in ESM mode (`--experimental-vm-modules`). Current coverage: 68 tests 
 │   │   └── sendCampaign.js       # Twilio fan-out with lease + self-yield + cursor
 │   └── __tests__/                # Jest suites
 └── web/
-    ├── images/logo.png           # InvestPub logo
+    ├── images/twiliologo.png     # Twilio logo
     ├── styles.css
     ├── index.html                # landing
     ├── login.html, signup.html   # auth pages (logo, no sidebar)
