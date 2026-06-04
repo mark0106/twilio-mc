@@ -34,12 +34,12 @@ body.app > main {
 }
 
 :root {
-  --brand-navy: #243d81;
-  --brand-navy-dark: #1a2d60;
-  --brand-navy-deep: #0f1f3d;
-  --brand-orange: #ff6900;
-  --brand-cream: #f8f3ef;
-  --brand-ink: #111111;
+  --brand-navy: #F22F46;
+  --brand-navy-dark: #CF0E32;
+  --brand-navy-deep: #121C2D;
+  --brand-orange: #F22F46;
+  --brand-cream: #F4F4F6;
+  --brand-ink: #121C2D;
   --brand-muted: #6b7280;
   --brand-border: #e5e7eb;
   --brand-surface: #ffffff;
@@ -66,8 +66,8 @@ body {
 /* ---------- Unauthenticated pages (index / login / signup): keep light ---------- */
 body:not(.app) {
   background:
-    radial-gradient(at 20% 10%, rgba(36, 61, 129, 0.10) 0px, transparent 50%),
-    radial-gradient(at 85% 90%, rgba(255, 105, 0, 0.08) 0px, transparent 50%),
+    radial-gradient(at 20% 10%, rgba(242, 47, 70, 0.10) 0px, transparent 50%),
+    radial-gradient(at 85% 90%, rgba(242, 47, 70, 0.08) 0px, transparent 50%),
     var(--brand-cream);
   min-height: 100vh;
 }
@@ -77,10 +77,10 @@ body.app {
   min-height: 100vh;
   /* Aurora background: navy and orange orbs layered on cream */
   background:
-    radial-gradient(at 0% 0%, rgba(36, 61, 129, 0.10) 0px, transparent 45%),
-    radial-gradient(at 100% 0%, rgba(255, 105, 0, 0.07) 0px, transparent 40%),
-    radial-gradient(at 100% 100%, rgba(36, 61, 129, 0.08) 0px, transparent 50%),
-    radial-gradient(at 30% 100%, rgba(255, 105, 0, 0.05) 0px, transparent 40%),
+    radial-gradient(at 0% 0%, rgba(242, 47, 70, 0.10) 0px, transparent 45%),
+    radial-gradient(at 100% 0%, rgba(242, 47, 70, 0.07) 0px, transparent 40%),
+    radial-gradient(at 100% 100%, rgba(242, 47, 70, 0.08) 0px, transparent 50%),
+    radial-gradient(at 30% 100%, rgba(242, 47, 70, 0.05) 0px, transparent 40%),
     var(--brand-cream);
   background-attachment: fixed;
 }
@@ -259,7 +259,7 @@ body.app > header {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(15, 31, 61, 0.5);
+  background: rgba(18, 28, 45, 0.5);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   z-index: 25;
@@ -367,7 +367,7 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--brand-navy);
-  box-shadow: 0 0 0 3px rgba(36, 61, 129, 0.12);
+  box-shadow: 0 0 0 3px rgba(242, 47, 70, 0.12);
 }
 button.primary {
   margin-top: 20px;
@@ -452,7 +452,7 @@ body.app .recipients-table {
 }
 body.app table.lists th,
 body.app .recipients-table th {
-  background: rgba(36, 61, 129, 0.04);
+  background: rgba(242, 47, 70, 0.04);
   padding: 14px 14px;
 }
 body.app table.lists td,
@@ -714,7 +714,7 @@ textarea {
   color: #6b7280;
 }
 .counter-row .encoding-badge {
-  background: rgba(36, 61, 129, 0.12);
+  background: rgba(242, 47, 70, 0.12);
   color: var(--brand-navy);
   padding: 2px 8px;
   border-radius: 999px;
@@ -723,7 +723,7 @@ textarea {
   letter-spacing: 0.04em;
 }
 .counter-row .encoding-badge.ucs2 {
-  background: rgba(255, 105, 0, 0.16);
+  background: rgba(242, 47, 70, 0.16);
   color: var(--brand-orange);
 }
 .counter-row .over-limit {
@@ -839,7 +839,7 @@ input[type="datetime-local"] {
 
 /* ---------- Dialog (replaces native alert/confirm) ---------- */
 .dialog-backdrop {
-  background: rgba(15, 31, 61, 0.4);
+  background: rgba(18, 28, 45, 0.4);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   animation: dialog-overlay-in 0.16s ease-out both;
@@ -861,8 +861,8 @@ input[type="datetime-local"] {
   text-align: center;
   border-radius: 16px;
   box-shadow:
-    0 8px 24px rgba(15, 31, 61, 0.18),
-    0 24px 60px rgba(15, 31, 61, 0.22);
+    0 8px 24px rgba(18, 28, 45, 0.18),
+    0 24px 60px rgba(18, 28, 45, 0.22);
   animation: dialog-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 .dialog-closing .modal-dialog {
@@ -909,7 +909,7 @@ input[type="datetime-local"] {
   height: 28px;
 }
 .modal-info .modal-dialog-icon {
-  background: rgba(36, 61, 129, 0.10);
+  background: rgba(242, 47, 70, 0.10);
   color: var(--brand-navy);
 }
 .modal-success .modal-dialog-icon {
@@ -917,7 +917,7 @@ input[type="datetime-local"] {
   color: #059669;
 }
 .modal-warning .modal-dialog-icon {
-  background: rgba(255, 105, 0, 0.14);
+  background: rgba(242, 47, 70, 0.14);
   color: var(--brand-orange);
 }
 .modal-danger .modal-dialog-icon {

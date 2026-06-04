@@ -44,8 +44,8 @@ export function renderNav(user, currentPath = window.location.pathname) {
 
   sidebar.innerHTML = `
     <div class="sidebar-inner">
-      <a class="sidebar-brand" href="/contacts.html" aria-label="InvestPub home">
-        <span class="logo-pill"><img src="/images/logo.png" alt="InvestPub" /></span>
+      <a class="sidebar-brand" href="/contacts.html" aria-label="Twilio home">
+        <span class="logo-pill"><img src="/images/twiliologo.png" alt="Twilio" /></span>
       </a>
       <nav class="sidebar-nav" aria-label="Primary">
         ${navHtml}

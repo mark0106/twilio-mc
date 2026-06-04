@@ -95,7 +95,7 @@ export function createPhonePreview(host) {
     <div class="pp-frame">
       <div class="pp-notch"></div>
       <div class="pp-header">
-        <img class="pp-logo" src="/images/logo.png" alt="InvestPub" />
+        <img class="pp-logo" src="/images/twiliologo.png" alt="Twilio" />
         <span class="pp-subtitle">SMS preview</span>
       </div>
       <div class="pp-body"></div>
